@@ -1,12 +1,35 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { ref, watch } from 'vue'
+import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCategoriesStore } from '@/stores/categories'
 import AuthModal from '@/components/AuthModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 
+const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
+const categoriesStore = useCategoriesStore()
 const showAuthModal = ref(false)
+
+// When user signs out, clear categories and redirect to home so the main section doesn’t show stale data
+watch(
+  () => auth.isLoggedIn,
+  (isLoggedIn) => {
+    if (!isLoggedIn) {
+      categoriesStore.clear()
+      if (route.meta.requiresAuth) {
+        router.replace({ name: 'home' })
+      }
+    }
+  }
+)
+
+async function handleSignOut() {
+  await auth.signOut()
+  categoriesStore.clear()
+  router.replace({ name: 'home' })
+}
 </script>
 
 <template>
@@ -35,7 +58,7 @@ const showAuthModal = ref(false)
             v-if="auth.isLoggedIn"
             type="button"
             class="text-sm font-medium text-gray-700 hover:text-gray-900"
-            @click="auth.signOut()"
+            @click="handleSignOut()"
           >
             Sign out
           </button>
@@ -53,7 +76,7 @@ const showAuthModal = ref(false)
     <main>
       <slot />
     </main>
-    <AuthModal :open="showAuthModal" @close="showAuthModal = false" />
+    <AuthModal :open="showAuthModal" @close="showAuthModal = false" @categories-created="categoriesStore.fetchCategories()" />
     <ToastContainer />
   </div>
 </template>

@@ -5,7 +5,7 @@ import { useToastStore } from '@/stores/toast'
 import { TOP_CATEGORIES, type TopCategory } from '@/data/topCategories'
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{ close: []; 'categories-created': [] }>()
 
 const toast = useToastStore()
 
@@ -98,6 +98,7 @@ async function submitGetStarted() {
     const { error } = await supabase.from('categories').insert(toInsert)
     if (error) throw error
     toast.addToast('Categories created. You’re all set!', 'success')
+    emit('categories-created')
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Could not create categories.'
     toast.addToast(message, 'error')
