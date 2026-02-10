@@ -3,6 +3,13 @@
 // Requires ENCRYPTION_KEY (32-byte hex) when using per-user keys.
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import {
+  FETCH_TIMEOUT_MS,
+  fetchWithTimeout,
+  getProviderFromTemplate,
+  persistPriceAndHistory,
+  successResponseBody,
+} from './helpers.ts'
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? Deno.env.get('SB_PUBLISHABLE_KEY') ?? ''
@@ -47,7 +54,7 @@ async function decrypt(encrypted: string): Promise<string> {
   return new TextDecoder().decode(dec)
 }
 
-/** Resolve API key for a provider: per-user (user_api_keys) if present, else env (Alpha Vantage only). */
+/** Resolve API key for a provider: per-user (user_api_keys) if present, else app-level env. */
 async function resolveApiKey(userId: string, provider: string): Promise<string | null> {
   if (SERVICE_ROLE_KEY && ENCRYPTION_KEY_HEX?.length === 64) {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
@@ -95,23 +102,8 @@ interface ItemWithCategory extends ItemRow {
   categories: CategoryRow | null
 }
 
-/** When category has no price_provider in DB, derive from name/slug (same logic as frontend template). */
-function getProviderFromTemplate(name: string | null | undefined, slug: string | null | undefined): string | null {
-  const norm = (s: string) =>
-    s
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-  const n = name ? norm(String(name)) : ''
-  const s = slug ? norm(String(slug)) : n
-  const combined = `${s} ${n}`.trim()
-  if (s === 'trading-cards' || n === 'trading-cards') return 'just_tcg'
-  const justTcgKeywords = ['trading-card', 'tcg', 'pokemon', 'mtg', 'yugioh']
-  for (const kw of justTcgKeywords) {
-    if (combined.includes(kw) || s.includes(kw) || n.includes(kw)) return 'just_tcg'
-  }
-  return null
+function successResponse(itemId: string, unitValue: number) {
+  return jsonResponse(successResponseBody(itemId, unitValue), 200)
 }
 
 Deno.serve(async (req) => {
@@ -187,7 +179,6 @@ Deno.serve(async (req) => {
     provider = 'just_tcg'
   }
   const currency = (row.currency ?? 'USD') as string
-  const FETCH_TIMEOUT_MS = 15000
 
   if (provider === 'alpha_vantage') {
     const ticker = (categoryFields.ticker ?? row.external_id) as string | undefined
@@ -211,10 +202,7 @@ Deno.serve(async (req) => {
     url.searchParams.set('apikey', apiKey)
     let res: Response
     try {
-      const ac = new AbortController()
-      const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
-      res = await fetch(url.toString(), { signal: ac.signal })
-      clearTimeout(timeoutId)
+      res = await fetchWithTimeout(url.toString(), {}, FETCH_TIMEOUT_MS)
     } catch (e) {
       const msg = e instanceof Error && e.name === 'AbortError'
         ? 'Price provider took too long to respond. Try again.'
@@ -246,33 +234,9 @@ Deno.serve(async (req) => {
     if (Number.isNaN(unitValue) || unitValue < 0) {
       return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Invalid price returned from provider.' }, 502)
     }
-    const { error: updateError } = await supabase
-      .from('items')
-      .update({
-        unit_value: unitValue,
-        last_price_at: new Date().toISOString(),
-        source: 'api',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', itemId)
-      .eq('user_id', userId)
-    if (updateError) {
-      return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not save updated price.' }, 500)
-    }
-    const { error: historyError } = await supabase.from('item_value_history').insert({
-      item_id: itemId,
-      recorded_at: new Date().toISOString(),
-      unit_value: unitValue,
-      currency,
-    })
-    if (historyError) console.error('item_value_history insert failed:', historyError.message)
-    return jsonResponse({
-      ok: true,
-      item_id: itemId,
-      unit_value: unitValue,
-      currency: 'USD',
-      last_price_at: new Date().toISOString(),
-    }, 200)
+    const persistErr = await persistPriceAndHistory(supabase, itemId, userId!, unitValue, currency)
+    if (persistErr) return jsonResponse(persistErr, 500)
+    return successResponse(itemId, unitValue)
   }
 
   if (provider === 'coin_gecko') {
@@ -296,13 +260,9 @@ Deno.serve(async (req) => {
     url.searchParams.set('vs_currencies', 'usd')
     let res: Response
     try {
-      const ac = new AbortController()
-      const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
-      res = await fetch(url.toString(), {
-        signal: ac.signal,
+      res = await fetchWithTimeout(url.toString(), {
         headers: { 'x-cg-demo-api-key': apiKey },
-      })
-      clearTimeout(timeoutId)
+      }, FETCH_TIMEOUT_MS)
     } catch (e) {
       const msg = e instanceof Error && e.name === 'AbortError'
         ? 'Price provider took too long to respond. Try again.'
@@ -330,33 +290,9 @@ Deno.serve(async (req) => {
     if (Number.isNaN(unitValue) || unitValue < 0) {
       return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not get price for this coin ID.' }, 502)
     }
-    const { error: updateError } = await supabase
-      .from('items')
-      .update({
-        unit_value: unitValue,
-        last_price_at: new Date().toISOString(),
-        source: 'api',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', itemId)
-      .eq('user_id', userId)
-    if (updateError) {
-      return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not save updated price.' }, 500)
-    }
-    const { error: historyError } = await supabase.from('item_value_history').insert({
-      item_id: itemId,
-      recorded_at: new Date().toISOString(),
-      unit_value: unitValue,
-      currency,
-    })
-    if (historyError) console.error('item_value_history insert failed:', historyError.message)
-    return jsonResponse({
-      ok: true,
-      item_id: itemId,
-      unit_value: unitValue,
-      currency: 'USD',
-      last_price_at: new Date().toISOString(),
-    }, 200)
+    const persistErr = await persistPriceAndHistory(supabase, itemId, userId!, unitValue, currency)
+    if (persistErr) return jsonResponse(persistErr, 500)
+    return successResponse(itemId, unitValue)
   }
 
   if (provider === 'discogs') {
@@ -380,16 +316,12 @@ Deno.serve(async (req) => {
     url.searchParams.set('curr_abbr', 'USD')
     let res: Response
     try {
-      const ac = new AbortController()
-      const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
-      res = await fetch(url.toString(), {
-        signal: ac.signal,
+      res = await fetchWithTimeout(url.toString(), {
         headers: {
           'Authorization': `Discogs token=${apiKey}`,
           'User-Agent': 'InvestOCenter/1.0 +https://github.com/investocenter',
         },
-      })
-      clearTimeout(timeoutId)
+      }, FETCH_TIMEOUT_MS)
     } catch (e) {
       const msg = e instanceof Error && e.name === 'AbortError'
         ? 'Price provider took too long to respond. Try again.'
@@ -419,33 +351,9 @@ Deno.serve(async (req) => {
     if (Number.isNaN(unitValue) || unitValue < 0) {
       return jsonResponse({ code: 'PROVIDER_ERROR', message: 'This release has no listings on the Discogs marketplace (or no price data). Pick a release that shows a price in search, or enter a value manually.' }, 502)
     }
-    const { error: updateError } = await supabase
-      .from('items')
-      .update({
-        unit_value: unitValue,
-        last_price_at: new Date().toISOString(),
-        source: 'api',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', itemId)
-      .eq('user_id', userId)
-    if (updateError) {
-      return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not save updated price.' }, 500)
-    }
-    const { error: historyError } = await supabase.from('item_value_history').insert({
-      item_id: itemId,
-      recorded_at: new Date().toISOString(),
-      unit_value: unitValue,
-      currency,
-    })
-    if (historyError) console.error('item_value_history insert failed:', historyError.message)
-    return jsonResponse({
-      ok: true,
-      item_id: itemId,
-      unit_value: unitValue,
-      currency: 'USD',
-      last_price_at: new Date().toISOString(),
-    }, 200)
+    const persistErr = await persistPriceAndHistory(supabase, itemId, userId!, unitValue, currency)
+    if (persistErr) return jsonResponse(persistErr, 500)
+    return successResponse(itemId, unitValue)
   }
 
   if (provider === 'just_tcg') {
@@ -470,13 +378,9 @@ Deno.serve(async (req) => {
     url.searchParams.set('tcgplayerId', id)
     let res: Response
     try {
-      const ac = new AbortController()
-      const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
-      res = await fetch(url.toString(), {
-        signal: ac.signal,
+      res = await fetchWithTimeout(url.toString(), {
         headers: { 'x-api-key': apiKey },
-      })
-      clearTimeout(timeoutId)
+      }, FETCH_TIMEOUT_MS)
     } catch (e) {
       const msg = e instanceof Error && e.name === 'AbortError'
         ? 'Price provider took too long to respond. Try again.'
@@ -515,33 +419,9 @@ Deno.serve(async (req) => {
     if (Number.isNaN(unitValue) || unitValue < 0) {
       return jsonResponse({ code: 'PROVIDER_ERROR', message: 'No valid price for this card.' }, 502)
     }
-    const { error: updateError } = await supabase
-      .from('items')
-      .update({
-        unit_value: unitValue,
-        last_price_at: new Date().toISOString(),
-        source: 'api',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', itemId)
-      .eq('user_id', userId)
-    if (updateError) {
-      return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not save updated price.' }, 500)
-    }
-    const { error: historyError } = await supabase.from('item_value_history').insert({
-      item_id: itemId,
-      recorded_at: new Date().toISOString(),
-      unit_value: unitValue,
-      currency,
-    })
-    if (historyError) console.error('item_value_history insert failed:', historyError.message)
-    return jsonResponse({
-      ok: true,
-      item_id: itemId,
-      unit_value: unitValue,
-      currency: 'USD',
-      last_price_at: new Date().toISOString(),
-    }, 200)
+    const persistErr = await persistPriceAndHistory(supabase, itemId, userId!, unitValue, currency)
+    if (persistErr) return jsonResponse(persistErr, 500)
+    return successResponse(itemId, unitValue)
   }
 
   if (provider === 'rent_cast') {
@@ -573,16 +453,12 @@ Deno.serve(async (req) => {
     console.log('RentCast request:', url.toString())
     let res: Response
     try {
-      const ac = new AbortController()
-      const timeoutId = setTimeout(() => ac.abort(), FETCH_TIMEOUT_MS)
-      res = await fetch(url.toString(), {
-        signal: ac.signal,
+      res = await fetchWithTimeout(url.toString(), {
         headers: {
           'X-Api-Key': apiKey,
           'Accept': 'application/json',
         },
-      })
-      clearTimeout(timeoutId)
+      }, FETCH_TIMEOUT_MS)
     } catch (e) {
       const msg = e instanceof Error && e.name === 'AbortError'
         ? 'Price provider took too long to respond. Try again.'
@@ -620,33 +496,9 @@ Deno.serve(async (req) => {
       console.error('RentCast value not found in response. Keys:', Object.keys(data))
       return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not get value for this address. Check Supabase function logs for response shape.' }, 502)
     }
-    const { error: updateError } = await supabase
-      .from('items')
-      .update({
-        unit_value: unitValue,
-        last_price_at: new Date().toISOString(),
-        source: 'api',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', itemId)
-      .eq('user_id', userId)
-    if (updateError) {
-      return jsonResponse({ code: 'PROVIDER_ERROR', message: 'Could not save updated value.' }, 500)
-    }
-    const { error: historyError } = await supabase.from('item_value_history').insert({
-      item_id: itemId,
-      recorded_at: new Date().toISOString(),
-      unit_value: unitValue,
-      currency,
-    })
-    if (historyError) console.error('item_value_history insert failed:', historyError.message)
-    return jsonResponse({
-      ok: true,
-      item_id: itemId,
-      unit_value: unitValue,
-      currency: 'USD',
-      last_price_at: new Date().toISOString(),
-    }, 200)
+    const persistErr = await persistPriceAndHistory(supabase, itemId, userId!, unitValue, currency)
+    if (persistErr) return jsonResponse(persistErr, 500)
+    return successResponse(itemId, unitValue)
   }
 
   return jsonResponse({ code: 'NO_PROVIDER', message: 'This category does not support automatic price refresh.' }, 400)

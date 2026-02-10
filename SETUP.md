@@ -50,6 +50,8 @@ npm install
 npm run dev
 ```
 
+**Tests:** `npm run test` runs the frontend unit tests (Vitest).
+
 Open [http://localhost:5173](http://localhost:5173). You should see the home page; the "Sign in" button will open the auth modal once that’s wired up.
 
 ## Checking your data in Supabase

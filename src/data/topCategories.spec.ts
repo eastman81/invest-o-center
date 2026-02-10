@@ -14,7 +14,7 @@ describe('getCategoryTemplateForNameOrSlug', () => {
       const t = getCategoryTemplateForNameOrSlug('Crypto', 'crypto')
       expect(t).not.toBeNull()
       expect(t!.price_provider).toBe('coin_gecko')
-      expect(t!.schema_fields).toEqual([{ key: 'coin_id', label: 'Coin ID', required: true }])
+      expect(t!.schema_fields).toEqual([{ key: 'coin_id', label: 'Coin ID (e.g. bitcoin, ethereum — not ETH)', required: true }])
     })
 
     it('returns Video Games template for slug "video-games"', () => {
