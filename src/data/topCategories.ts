@@ -12,7 +12,7 @@ export interface TopCategory {
 export const TOP_CATEGORIES: TopCategory[] = [
   { name: 'Stocks', slug: 'stocks', price_provider: 'alpha_vantage', schema_fields: [{ key: 'ticker', label: 'Ticker', required: true }] },
   { name: 'Crypto', slug: 'crypto', price_provider: 'coin_gecko', schema_fields: [{ key: 'coin_id', label: 'Coin ID (e.g. bitcoin, ethereum — not ETH)', required: true }] },
-  { name: 'Gold & Silver', slug: 'gold-silver', price_provider: 'gold_api', schema_fields: [] },
+  { name: 'Precious Metals', slug: 'precious-metals', price_provider: 'gold_api', schema_fields: [{ key: 'metal', label: 'Metal (Gold, Silver, Platinum or Palladium)', required: true }] },
   { name: 'CDs & Records', slug: 'music', price_provider: 'discogs', schema_fields: [{ key: 'discogs_release_id', label: 'Discogs Release ID', required: true }] },
   { name: 'Trading Cards', slug: 'trading-cards', price_provider: 'just_tcg', schema_fields: [{ key: 'tcgplayer_id', label: 'JustTCG card ID', required: true }] },
   {
@@ -46,7 +46,7 @@ function normalizeForMatch(s: string): string {
 const SLUG_KEYWORDS: { keywords: string[]; template: TopCategory }[] = [
   { keywords: ['stock', 'stocks', 'equity', 'equities', 'etf', 'etfs'], template: TOP_CATEGORIES[0] },
   { keywords: ['crypto', 'cryptocurrency', 'bitcoin', 'ethereum'], template: TOP_CATEGORIES[1] },
-  { keywords: ['gold', 'silver', 'precious-metal'], template: TOP_CATEGORIES[2] },
+  { keywords: ['gold', 'silver', 'platinum', 'palladium', 'precious-metal', 'metals'], template: TOP_CATEGORIES[2] },
   { keywords: ['vinyl', 'record', 'records', 'discogs', 'cd', 'cds'], template: TOP_CATEGORIES[3] },
   { keywords: ['trading-card', 'tcg', 'pokemon', 'mtg', 'yugioh'], template: TOP_CATEGORIES[4] },
   { keywords: ['real-estate', 'property', 'properties', 'home', 'homes', 'house', 'houses'], template: TOP_CATEGORIES[5] },

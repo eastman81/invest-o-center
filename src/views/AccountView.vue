@@ -32,6 +32,7 @@ const API_KEY_PROVIDERS: { id: string; label: string }[] = [
   { id: 'alpha_vantage', label: 'Alpha Vantage (stocks)' },
   { id: 'coin_gecko', label: 'CoinGecko (crypto)' },
   { id: 'discogs', label: 'Discogs (CDs & records)' },
+  { id: 'gold_api', label: 'GoldAPI (precious metals spot)' },
   { id: 'just_tcg', label: 'JustTCG (trading cards)' },
   { id: 'rent_cast', label: 'RentCast (real estate / home value)' },
 ]

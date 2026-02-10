@@ -54,7 +54,7 @@ interface RequestBody {
   key: string
 }
 
-const ALLOWED_PROVIDERS = ['alpha_vantage', 'coin_gecko', 'discogs', 'just_tcg', 'rent_cast']
+const ALLOWED_PROVIDERS = ['alpha_vantage', 'coin_gecko', 'discogs', 'gold_api', 'just_tcg', 'rent_cast']
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {

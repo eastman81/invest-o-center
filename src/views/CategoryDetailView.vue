@@ -53,7 +53,7 @@ const duplicateItemIds = computed(() => {
   if (list.length < 2) return ids
   const cat = category.value
   const keyField = cat?.schema_fields?.length
-    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
+    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'metal' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
     : null
   const key = keyField?.key ?? null
   const groups = new Map<string, ItemRow[]>()
@@ -76,7 +76,7 @@ const duplicateGroups = computed(() => {
   if (list.length < 2) return []
   const cat = category.value
   const keyField = cat?.schema_fields?.length
-    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
+    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'metal' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
     : null
   const key = keyField?.key ?? null
   const groups = new Map<string, ItemRow[]>()

@@ -96,7 +96,57 @@ We use `data[coin_id].usd` as `unit_value` (USD).
 
 ---
 
-## 3. RentCast (real estate / home value)
+## 3. GoldAPI (precious metals spot)
+
+**Provider id:** `gold_api`  
+**Item requirement:** Category has `price_provider: 'gold_api'`. Item has **Metal** in `category_fields.metal`: **Gold**, **Silver**, **Platinum**, or **Palladium** (or symbols `XAU`, `XAG`, `XPT`, `XPD`). We use the **spot price per troy ounce** in USD as `unit_value`.
+
+**Docs:** https://www.goldapi.io/
+
+### Request
+
+| Field    | Value |
+|----------|--------|
+| **Method** | `GET` |
+| **URL**    | `https://www.goldapi.io/api/{XAU|XAG|XPT|XPD}/USD` (gold, silver, platinum, palladium) |
+| **Headers** | `x-access-token: <key>` |
+
+**Example**
+
+```
+GET https://www.goldapi.io/api/XAU/USD
+x-access-token: YOUR_KEY
+```
+
+**App key env:** `GOLDAPI_API_KEY`  
+Get a free key at [goldapi.io](https://www.goldapi.io/) (100 requests/month, no card).
+
+### Rate limits
+
+- **Free:** 100 requests/month. Returns 429 when exceeded.
+
+### Response (success)
+
+JSON. We read `data.price` (spot price per troy oz in USD).
+
+**Example**
+
+```json
+{
+  "timestamp": 1591149337,
+  "metal": "XAU",
+  "currency": "USD",
+  "price": 1727.75,
+  "ask": 1728.4,
+  "bid": 1727.08
+}
+```
+
+We use `price` as `unit_value` (USD per troy oz).
+
+---
+
+## 4. RentCast (real estate / home value)
 
 **Provider id:** `rent_cast`  
 **Item requirement:** Category has `price_provider: 'rent_cast'`. Item has **address** in `category_fields.address` (or `external_id`). Optional but recommended: `city`, `state`, `zip` in `category_fields` for accurate property matching. We build one string: `"<street>, <city>, <state>, <zip>"` (omitting empty parts).
@@ -150,7 +200,7 @@ We use `price` as `unit_value` (USD). The Edge Function also logs the full respo
 
 ---
 
-## 4. Discogs (CDs & records)
+## 5. Discogs (CDs & records)
 
 **Provider id:** `discogs`  
 **Item requirement:** Category has `price_provider: 'discogs'`. Item has a **Discogs Release ID** (numeric, or full release URL) in `category_fields.discogs_release_id` or `external_id`.
@@ -221,7 +271,7 @@ The function calls Discogs search, then fetches release details for the first 8 
 
 ---
 
-## 5. JustTCG (trading cards)
+## 6. JustTCG (trading cards)
 
 **Provider id:** `just_tcg`  
 **Item requirement:** Category has `price_provider: 'just_tcg'`. Item has a **JustTCG card ID** (product ID from JustTCG search or dashboard) in `category_fields.tcgplayer_id` or `external_id`.
@@ -298,12 +348,13 @@ The function calls JustTCG `GET /v1/cards?q=...&limit=8` and returns `{ results:
 
 ## Summary
 
-| Provider       | App key env            | Item identifier     | We extract                    |
-|----------------|------------------------|---------------------|-------------------------------|
-| Alpha Vantage  | `ALPHA_VANTAGE_API_KEY`| Ticker              | `Global Quote["05. price"]`   |
-| CoinGecko      | `COINGECKO_API_KEY`    | Coin ID             | `data[coin_id].usd`           |
-| Discogs        | `DISCOGS_TOKEN`        | Release ID (numeric or URL) | `data.lowest_price`   |
-| JustTCG        | `JUSTTCG_API_KEY`      | JustTCG card ID     | lowest of `data[0].variants[].price` |
-| RentCast       | `RENTCAST_API_KEY`     | Full address string | `data.price` (or fallbacks)   |
+| Provider       | App key env            | Item identifier                        | We extract                    |
+|----------------|------------------------|----------------------------------------|-------------------------------|
+| Alpha Vantage  | `ALPHA_VANTAGE_API_KEY`| Ticker                                 | `Global Quote["05. price"]`   |
+| CoinGecko      | `COINGECKO_API_KEY`    | Coin ID                                | `data[coin_id].usd`           |
+| GoldAPI        | `GOLDAPI_API_KEY`      | Metal (Gold/Silver/Platinum/Palladium) | `data.price` (USD/troy oz)    |
+| Discogs        | `DISCOGS_TOKEN`        | Release ID (numeric or URL)            | `data.lowest_price`           |
+| JustTCG        | `JUSTTCG_API_KEY`      | JustTCG card ID                 | lowest of `data[0].variants[].price` |
+| RentCast       | `RENTCAST_API_KEY`     | Full address string                    | `data.price` (or fallbacks)   |
 
-All five are invoked from the **refresh-item-price** Edge Function when the user clicks “Refresh” on an item whose category has the matching `price_provider`. Keys can be set in Supabase Edge Function secrets (app-level) or per user in Account → API keys.
+All six are invoked from the **refresh-item-price** Edge Function when the user clicks “Refresh” on an item whose category has the matching `price_provider`. Keys can be set in Supabase Edge Function secrets (app-level) or per user in Account → API keys. **After adding a new key or changing the function,** deploy so the live app uses it: `supabase functions deploy refresh-item-price`.

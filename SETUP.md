@@ -27,13 +27,17 @@
 
 Supabase has one **Secrets** area for all Edge Functions (e.g. **Project Settings → Edge Functions → Secrets**). Add your provider API keys there; **refresh-item-price** uses them for all users when they click “Refresh” on an item.
 
+**Important:** After adding a new API key (or after any change to the refresh function code), you must **deploy** the function or the live app won’t use it:  
+`supabase functions deploy refresh-item-price`
+
 **To enable price refresh:**
 
 1. **Stocks:** Add **ALPHA_VANTAGE_API_KEY** (get one at [alphavantage.co/support/#api-key](https://www.alphavantage.co/support/#api-key)).
 2. **Crypto:** Add **COINGECKO_API_KEY** (get a Demo key at [coingecko.com/api/dashboard](https://www.coingecko.com/api/dashboard)).
 3. **CDs & records:** Add **DISCOGS_TOKEN** (Personal Access Token from [discogs.com/settings/developers](https://www.discogs.com/settings/developers); 60 requests/min).
-4. **Trading cards:** Add **JUSTTCG_API_KEY** (get one at [justtcg.com](https://justtcg.com) → Dashboard; raw/ungraded card prices only, no graded slabs).
-5. **Real estate:** Add **RENTCAST_API_KEY** (get one at [app.rentcast.io/app/api](https://app.rentcast.io/app/api); 50 free calls/month).
+4. **Precious metals:** Add **GOLDAPI_API_KEY** (free at [goldapi.io](https://www.goldapi.io); Gold, Silver, Platinum, Palladium; 100 requests/month).
+5. **Trading cards:** Add **JUSTTCG_API_KEY** (get one at [justtcg.com](https://justtcg.com) → Dashboard; raw/ungraded card prices only, no graded slabs).
+6. **Real estate:** Add **RENTCAST_API_KEY** (get one at [app.rentcast.io/app/api](https://app.rentcast.io/app/api); 50 free calls/month).
 
 **Optional — per-user keys:** If you also add **ENCRYPTION_KEY** (32 bytes as 64 hex chars, e.g. `openssl rand -hex 32`) and **SUPABASE_SERVICE_ROLE_KEY**, users can add their own keys in **Account → API keys**. When a user has a key saved for a provider, that overrides your app-level key for them.
 

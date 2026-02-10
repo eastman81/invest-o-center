@@ -18,9 +18,14 @@ export function getProviderFromTemplate(
   const s = slug ? norm(String(slug)) : n
   const combined = `${s} ${n}`.trim()
   if (s === 'trading-cards' || n === 'trading-cards') return 'just_tcg'
+  if (s === 'gold-silver' || n === 'gold-silver' || s === 'precious-metals' || n === 'precious-metals') return 'gold_api'
   const justTcgKeywords = ['trading-card', 'tcg', 'pokemon', 'mtg', 'yugioh']
   for (const kw of justTcgKeywords) {
     if (combined.includes(kw) || s.includes(kw) || n.includes(kw)) return 'just_tcg'
+  }
+  const goldApiKeywords = ['gold', 'silver', 'platinum', 'palladium', 'precious-metal']
+  for (const kw of goldApiKeywords) {
+    if (combined.includes(kw) || s.includes(kw) || n.includes(kw)) return 'gold_api'
   }
   return null
 }
