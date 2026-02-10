@@ -31,6 +31,8 @@ const apiKeyError = ref<string | null>(null)
 const API_KEY_PROVIDERS: { id: string; label: string }[] = [
   { id: 'alpha_vantage', label: 'Alpha Vantage (stocks)' },
   { id: 'coin_gecko', label: 'CoinGecko (crypto)' },
+  { id: 'discogs', label: 'Discogs (CDs & records)' },
+  { id: 'just_tcg', label: 'JustTCG (trading cards)' },
   { id: 'rent_cast', label: 'RentCast (real estate / home value)' },
 ]
 
@@ -293,7 +295,7 @@ onMounted(() => {
                   v-model="apiKeyInputs[p.id]"
                   type="password"
                   class="block w-64 rounded-md border border-gray-300 px-2 py-1.5 text-sm sm:w-72"
-                  :placeholder="'Enter ' + p.label + ' API key'"
+                  placeholder="Enter API key"
                   autocomplete="off"
                 />
                 <button
@@ -313,7 +315,7 @@ onMounted(() => {
         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 class="text-base font-medium text-gray-900">Sign out</h2>
           <p class="mt-1 text-sm text-gray-600">
-            Sign out of your account. You’ll be returned to the home page.
+            Sign out of your account. You'll be returned to the home page.
           </p>
           <button
             type="button"

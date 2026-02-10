@@ -14,6 +14,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 import type { CategoryDetail } from '@/types/category'
 import type { ItemRow } from '@/types/item'
+import cgLogo from '@/assets/attribution/cg_default.png'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -52,7 +53,7 @@ const duplicateItemIds = computed(() => {
   if (list.length < 2) return ids
   const cat = category.value
   const keyField = cat?.schema_fields?.length
-    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id') ?? cat.schema_fields[0]
+    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
     : null
   const key = keyField?.key ?? null
   const groups = new Map<string, ItemRow[]>()
@@ -75,7 +76,7 @@ const duplicateGroups = computed(() => {
   if (list.length < 2) return []
   const cat = category.value
   const keyField = cat?.schema_fields?.length
-    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id') ?? cat.schema_fields[0]
+    ? cat.schema_fields.find((f) => f.key === 'ticker' || f.key === 'coin_id' || f.key === 'discogs_release_id' || f.key === 'tcgplayer_id') ?? cat.schema_fields[0]
     : null
   const key = keyField?.key ?? null
   const groups = new Map<string, ItemRow[]>()
@@ -521,6 +522,22 @@ function itemTotal(item: ItemRow) {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div
+          v-if="category.price_provider === 'coin_gecko'"
+          class="mt-6 flex justify-end"
+        >
+          <a
+            href="https://www.coingecko.com?utm_source=investocenter&utm_medium=referral"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="inline-flex items-center gap-1.5 rounded border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 shadow-sm hover:border-gray-300 hover:text-gray-900"
+            title="Crypto price data by CoinGecko"
+          >
+            <span class="whitespace-nowrap">Price data by</span>
+            <img :src="cgLogo" alt="CoinGecko" class="h-4 w-auto" />
+          </a>
         </div>
       </template>
     </div>

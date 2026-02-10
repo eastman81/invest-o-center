@@ -13,3 +13,11 @@ verify_jwt = false
 # PostgREST for the upsert, and RLS validates it. Add ENCRYPTION_KEY to project secrets.
 [functions.save-api-key]
 verify_jwt = false
+
+# discogs-search: same pattern; we validate JWT in code and use it to resolve user + token.
+[functions.discogs-search]
+verify_jwt = false
+
+# justtcg-search: same pattern; we validate JWT and resolve JustTCG API key for card search.
+[functions.justtcg-search]
+verify_jwt = false

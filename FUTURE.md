@@ -2,6 +2,11 @@
 
 Ideas to revisit when core features are done.
 
+## Free tier vs paid tier
+
+- **Paid tier:** Can use all of the app’s API keys (yours in Edge Function secrets). Price refresh and features work without users adding their own keys.
+- **Free tier:** Must enter their own API keys in Account → API keys for the site to work (stocks, crypto, real estate refresh, etc.). No access to app-level keys.
+
 ## PriceCharting (paid)
 
 - **URL:** https://www.pricecharting.com/api-documentation  
