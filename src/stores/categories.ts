@@ -34,9 +34,28 @@ export const useCategoriesStore = defineStore('categories', () => {
     loading.value = false
   }
 
+  async function deleteCategory(categoryId: string): Promise<{ error: Error | null }> {
+    const userId = auth.user?.id
+    if (!userId) return { error: new Error('Not signed in') }
+    const { error: itemsError } = await supabase
+      .from('items')
+      .delete()
+      .eq('category_id', categoryId)
+      .eq('user_id', userId)
+    if (itemsError) return { error: itemsError as Error }
+    const { error: catError } = await supabase
+      .from('categories')
+      .delete()
+      .eq('id', categoryId)
+      .eq('user_id', userId)
+    if (catError) return { error: catError as Error }
+    categories.value = categories.value.filter((c) => c.id !== categoryId)
+    return { error: null }
+  }
+
   function clear() {
     categories.value = []
   }
 
-  return { categories, loading, fetchCategories, clear }
+  return { categories, loading, fetchCategories, deleteCategory, clear }
 })

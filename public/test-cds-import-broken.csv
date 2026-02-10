@@ -1,0 +1,11 @@
+Name,Quantity,Unit value,Notes
+Valid CD One,1,9.99,OK row
+,2,8.50,Missing name - row 3
+Valid CD Two,1,11.00,Fine
+Bad Qty CD,not-a-number,10.00,Quantity not a number - row 5
+Another OK,0,0.00,Zero qty allowed
+Bad Unit Value,1 oops,9.99,Unit value invalid - row 7
+Empty Name Again,,5.00,No name - row 8
+Negative Qty,-3,12.00,Negative quantity - row 9
+Bad UV negative,2,-5.00,Negative unit value - row 10
+Last Valid,1,7.99,OK

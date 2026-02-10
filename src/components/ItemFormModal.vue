@@ -98,7 +98,7 @@ function submit() {
 }
 
 function handleBackdropClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).dataset.backdrop) emit('close')
+  if ((e.target as HTMLElement).hasAttribute?.('data-backdrop')) emit('close')
 }
 </script>
 

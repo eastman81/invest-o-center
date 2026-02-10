@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
+import { invalidateHistoryCache } from '@/lib/valueHistory'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoriesStore } from '@/stores/categories'
 import AuthModal from '@/components/AuthModal.vue'
@@ -17,6 +18,7 @@ watch(
   () => auth.isLoggedIn,
   (isLoggedIn) => {
     if (!isLoggedIn) {
+      invalidateHistoryCache()
       categoriesStore.clear()
       if (route.meta.requiresAuth) {
         router.replace({ name: 'home' })
@@ -27,6 +29,7 @@ watch(
 
 async function handleSignOut() {
   await auth.signOut()
+  invalidateHistoryCache()
   categoriesStore.clear()
   router.replace({ name: 'home' })
 }

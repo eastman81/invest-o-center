@@ -1,0 +1,15 @@
+# Supabase project config (used by CLI for deploy/serve)
+# Disable gateway JWT verification for refresh-item-price so the request reaches the function.
+# The function reads the user from the JWT payload and uses the token for PostgREST (which validates it).
+[functions.refresh-item-price]
+verify_jwt = false
+
+# Daily snapshot: run with --no-verify-jwt so cron can invoke without a user JWT.
+# Set SNAPSHOT_CRON_SECRET in secrets and send x-cron-secret header when invoking.
+[functions.snapshot-item-values]
+verify_jwt = false
+
+# save-api-key: skip gateway JWT check so request reaches the function; we pass the token to
+# PostgREST for the upsert, and RLS validates it. Add ENCRYPTION_KEY to project secrets.
+[functions.save-api-key]
+verify_jwt = false

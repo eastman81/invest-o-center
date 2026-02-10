@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
+import { getCategoryTemplateForNameOrSlug } from '@/data/topCategories'
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ close: []; created: [] }>()
@@ -46,12 +47,13 @@ async function submit() {
   if (!auth.user?.id) return
   saving.value = true
   try {
+    const template = getCategoryTemplateForNameOrSlug(nameTrim, slugTrim)
     const { error } = await supabase.from('categories').insert({
       user_id: auth.user.id,
       name: nameTrim,
       slug: slugTrim,
-      price_provider: null,
-      schema_fields: [],
+      price_provider: template?.price_provider ?? null,
+      schema_fields: template?.schema_fields ?? [],
     })
     if (error) throw error
     toast.addToast('Category created.', 'success')
@@ -66,7 +68,7 @@ async function submit() {
 }
 
 function handleBackdropClick(e: MouseEvent) {
-  if ((e.target as HTMLElement).dataset.backdrop) emit('close')
+  if ((e.target as HTMLElement).hasAttribute?.('data-backdrop')) emit('close')
 }
 </script>
 
