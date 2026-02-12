@@ -23,6 +23,8 @@ const displayNameEdit = ref('')
 const savingProfile = ref(false)
 const profileError = ref<string | null>(null)
 const savingPrefs = ref(false)
+const upgradingPlan = ref(false)
+const planError = ref<string | null>(null)
 
 const configuredProviders = ref<Set<string>>(new Set())
 const apiKeyInputs = ref<Record<string, string>>({})
@@ -40,6 +42,8 @@ const API_KEY_PROVIDERS: { id: string; label: string }[] = [
 const email = computed(() => auth.user?.email ?? '')
 const profile = computed(() => profileStore.profile)
 const dashboardPrefs = computed(() => profileStore.dashboardPrefs)
+const plan = computed(() => profile.value?.plan ?? 'free')
+const isFreePlan = computed(() => plan.value === 'free')
 
 const sectionLabels: Record<DashboardSectionId, string> = {
   favorites: 'Favorites',
@@ -139,6 +143,14 @@ async function removeApiKey(provider: string) {
   await loadConfiguredProviders()
 }
 
+async function upgradeToPaid() {
+  planError.value = null
+  upgradingPlan.value = true
+  const err = await profileStore.updatePlan('paid')
+  upgradingPlan.value = false
+  if (err) planError.value = err.message
+}
+
 async function handleSignOut() {
   await auth.signOut()
   invalidateHistoryCache()
@@ -198,6 +210,30 @@ onMounted(() => {
           </dl>
         </section>
 
+        <!-- Plan -->
+        <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 class="text-base font-medium text-gray-900">Plan</h2>
+          <p class="mt-1 text-sm text-gray-600">
+            <template v-if="isFreePlan">
+              Your plan: <strong>Free</strong>. Add your own API keys below for refresh and search. Upgrade to Paid to use the app’s keys when you haven’t added your own.
+            </template>
+            <template v-else>
+              Your plan: <strong>Paid</strong>. You can use the app's API keys for refresh and search, or add your own in API keys to override.
+            </template>
+          </p>
+          <p v-if="planError" class="mt-2 text-sm text-red-600">{{ planError }}</p>
+          <div v-if="isFreePlan" class="mt-4">
+            <button
+              type="button"
+              class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              :disabled="upgradingPlan"
+              @click="upgradeToPaid"
+            >
+              {{ upgradingPlan ? 'Upgrading…' : 'Upgrade to Paid' }}
+            </button>
+          </div>
+        </section>
+
         <!-- Dashboard preferences -->
         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 class="text-base font-medium text-gray-900">Dashboard preferences</h2>
@@ -253,7 +289,7 @@ onMounted(() => {
         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 class="text-base font-medium text-gray-900">API keys</h2>
           <p class="mt-1 text-sm text-gray-600">
-            Add your own API keys for price providers. Keys are encrypted and stored per account. Used when you click “Refresh” on an item.
+            Add your own API keys for price providers. Keys are encrypted and stored per account. On Free, your keys are used for refresh and search. On Paid, the app can use its keys when you haven’t added yours.
           </p>
           <p v-if="apiKeyError" class="mt-2 text-sm text-red-600">{{ apiKeyError }}</p>
           <ul class="mt-4 space-y-4">

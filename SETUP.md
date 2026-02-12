@@ -9,6 +9,7 @@
    - `supabase/migrations/00003_user_favorites.sql`
    - `supabase/migrations/00004_schedule_snapshot_cron.sql` (optional; needs pg_cron, pg_net, and Vault secrets — see “Value history and the daily snapshot” below)
    - `supabase/migrations/00005_item_value_history_rpc.sql` (efficient history fetch for many items)
+   - `supabase/migrations/00006_profiles_plan.sql` (free/paid plan; new users default to free)
 3. In **Project Settings → API**, copy:
    - **Project URL** → `VITE_SUPABASE_URL`
    - **Publishable** key (`sb_publishable_...`) → `VITE_SUPABASE_PUBLISHABLE_KEY`. Never use the **service_role** key in the frontend.

@@ -37,10 +37,13 @@ export function normalizeDashboardPrefs(raw: unknown): DashboardPrefs {
   }
 }
 
+export type PlanId = 'free' | 'paid'
+
 interface ProfileRow {
   id: string
   display_name: string | null
   dashboard_prefs: unknown
+  plan: PlanId
   created_at: string
 }
 
@@ -60,7 +63,7 @@ export const useProfileStore = defineStore('profile', () => {
     }
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, display_name, dashboard_prefs, created_at')
+      .select('id, display_name, dashboard_prefs, plan, created_at')
       .eq('id', userId)
       .single()
     if (error || !data) {
@@ -100,11 +103,23 @@ export const useProfileStore = defineStore('profile', () => {
     return error
   }
 
+  async function updatePlan(plan: PlanId) {
+    const userId = auth.user?.id
+    if (!userId) return
+    const { error } = await supabase
+      .from('profiles')
+      .update({ plan })
+      .eq('id', userId)
+    if (!error && profile.value) profile.value.plan = plan
+    return error
+  }
+
   return {
     profile,
     dashboardPrefs,
     load,
     updateDisplayName,
     updateDashboardPrefs,
+    updatePlan,
   }
 })

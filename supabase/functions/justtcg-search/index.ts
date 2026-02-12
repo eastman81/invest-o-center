@@ -42,7 +42,7 @@ async function decrypt(encrypted: string): Promise<string> {
   return new TextDecoder().decode(dec)
 }
 
-async function resolveJustTCGKey(userId: string): Promise<string | null> {
+async function resolveJustTCGKey(userId: string, allowAppKeys: boolean): Promise<string | null> {
   if (SERVICE_ROLE_KEY && ENCRYPTION_KEY_HEX?.length === 64) {
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
     const { data: row } = await admin
@@ -59,6 +59,7 @@ async function resolveJustTCGKey(userId: string): Promise<string | null> {
       }
     }
   }
+  if (!allowAppKeys) return null
   return JUSTTCG_API_KEY ?? null
 }
 
@@ -126,11 +127,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ code: 'BAD_REQUEST', message: 'Query "q" is required.' }, 400)
     }
 
-    const apiKey = await resolveJustTCGKey(userId)
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY!)
+    const { data: profile } = await admin.from('profiles').select('plan').eq('id', userId).maybeSingle()
+    const allowAppKeys = profile?.plan !== 'free'
+
+    const apiKey = await resolveJustTCGKey(userId, allowAppKeys)
     if (!apiKey) {
+      const freeHint = !allowAppKeys
+        ? " You're on the Free plan — add your own key in Account, or upgrade to Paid to use the app's keys."
+        : ''
       return jsonResponse({
         code: 'PROVIDER_ERROR',
-        message: 'Add your JustTCG API key in Account → API keys, or ask the app admin to set JUSTTCG_API_KEY.',
+        message: 'Add your JustTCG API key in Account → API keys, or ask the app admin to set JUSTTCG_API_KEY.' + freeHint,
       }, 502)
     }
 

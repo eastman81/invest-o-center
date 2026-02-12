@@ -335,11 +335,11 @@ We use `Math.min(...variant.prices)` as `unit_value` (USD).
 
 The app lets users search JustTCG by card name when adding/editing a Trading Cards item. The **justtcg-search** Edge Function proxies the request so the API key stays server-side.
 
-| Field    | Value |
-|----------|--------|
-| **Method** | `POST` |
-| **URL**    | (Supabase) `/functions/v1/justtcg-search` |
-| **Body**   | `{ "q": "<search query>" }` — optional: `"game": "<game id>"` to narrow by game |
+| Field       | Value  |
+|-------------|--------|
+| **Method**  | `POST` |
+| **URL**     | (Supabase) `/functions/v1/justtcg-search` |
+| **Body**    | `{ "q": "<search query>" }` — optional: `"game": "<game id>"` to narrow by game |
 | **Headers** | `Authorization: Bearer <user JWT>` (client sends session) |
 
 The function calls JustTCG `GET /v1/cards?q=...&limit=8` and returns `{ results: [ { tcgplayerId, name, set_name, game, lowest_price } ] }`. The UI shows set, game, and price; selecting a result stores the card ID and auto-fills the item name so Refresh can use it.

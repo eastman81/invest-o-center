@@ -1,31 +1,57 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { RouterLink, useRouter, useRoute } from 'vue-router'
 import { invalidateHistoryCache } from '@/lib/valueHistory'
 import { useAuthStore } from '@/stores/auth'
 import { useCategoriesStore } from '@/stores/categories'
+import { useProfileStore } from '@/stores/profile'
 import AuthModal from '@/components/AuthModal.vue'
+import PlanModal from '@/components/PlanModal.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
+
+const PLAN_MODAL_KEY = 'saw_plan_modal'
 
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const categoriesStore = useCategoriesStore()
+const profileStore = useProfileStore()
 const showAuthModal = ref(false)
+const showPlanModal = ref(false)
 
-// When user signs out, clear categories and redirect to home so the main section doesn’t show stale data
+const shouldShowPlanModal = computed(() => {
+  if (!auth.isLoggedIn || !profileStore.profile) return false
+  if (profileStore.profile.plan !== 'free') return false
+  try {
+    return !sessionStorage.getItem(PLAN_MODAL_KEY)
+  } catch {
+    return false
+  }
+})
+
+onMounted(async () => {
+  if (auth.isLoggedIn) await profileStore.load()
+})
+
 watch(
   () => auth.isLoggedIn,
-  (isLoggedIn) => {
+  async (isLoggedIn) => {
     if (!isLoggedIn) {
       invalidateHistoryCache()
       categoriesStore.clear()
+      showPlanModal.value = false
       if (route.meta.requiresAuth) {
         router.replace({ name: 'home' })
       }
+    } else {
+      await profileStore.load()
     }
   }
 )
+
+watch(shouldShowPlanModal, (v) => {
+  showPlanModal.value = v
+}, { immediate: true })
 
 async function handleSignOut() {
   await auth.signOut()
@@ -80,6 +106,7 @@ async function handleSignOut() {
       <slot />
     </main>
     <AuthModal :open="showAuthModal" @close="showAuthModal = false" @categories-created="categoriesStore.fetchCategories()" />
+    <PlanModal :open="showPlanModal" @close="showPlanModal = false" />
     <ToastContainer />
   </div>
 </template>
